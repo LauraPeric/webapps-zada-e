@@ -1,49 +1,58 @@
 import express from "express"
 import bodyParser from "body-parser"
-import { v4 as uuidv4 } from "uuid"
+import connect from './db,js'
+import mongo from 'mongodb'
+
 const app = express()
 const port = 3000
 
 app.use(bodyParser.json())
 
-var tempstorage = []
-
-app.post("/dodajObavjestt", (req, res) => {
-    var data = req.body
-    console.log(data)
-    data = { ...data, "id": dvuui4(), "datum": new Date() }
-    tempstorage.push(data)
-    res.send(tempstorage)
+app.get('/art/id:', async (req, res) => {
+    let id = req.params.id
+    let db = await connect()
+    let doc = await db.collection('art').findOne({ _id: mongo.ObjectId(id) })
+    if (doc) {
+        res.json({ "status": "ok", "data": doc })
+    }
+    else {
+        res.json({ "status": "failed" })
+    }
 })
 
-app.get("/vratiObavjestii", (req, res) => {
-    let filter = []
-
-    tempstorage.forEach(l => {
-        filter.push({
-            "naziv": l.naziv,
-            "datum": l.datum
-        })
-    });
-    res.send(filter)
-});
-
-app.get("/vratiObavjestt/:id", (req, res) => {
-    var { id } = req.params
-    var obavjest = tempstorage.find((l) => l.id == id)
-    res.send({
-        "sadrzaj": obavjest.sadrzaj,
-        "naziv": obavjest.naziv,
-        "datum": obavjest.datum
-    })
+app.post('/saveitem', async (req, res) => {
+    let db = await connect()
+    let data = req.body
+    let result = await db.collection('saveitem').InsertOne(data)
+    if (result.insertedId) {
+        res.json({ "status": "OK", "message": 'item inserted with ${result.insertedId}' })
+    }
+    else {
+        res.json({ "status": "failed" })
+    }
 })
 
-app.patch("/izmjeniObavjestt/:id", (req, res) => {
-    var { id } = req.params
-    var obavjest = tempstorage.find((l) => l.id == id)
-    var { sadrzaj } = req.body
-    obavjest.sadrzaj = sadrzaj
-    res.send(obavjest)
+app.patch('/updateitemprice/id:', async (req, res) => {
+    let data = req.body
+    let id = req.params.id
+    let db = await connect()
+    let result = await db.collection('/updateitemprice/id:').updateOne(
+        { _id: mongo.ObjectId(id) },
+        { $set: data, }
+    )
+    res.json(result)
 })
 
-app.listen(port, () => console.log(`Works on port ${port}`));
+app.delete('/art/id:', async (req, res) => {
+    let id = req.params.id
+    let db = await connect()
+    let result = await db.collection('art').deleteOne(
+        { _id: mongo.ObjectId(id) }
+    )
+    if (result.deleteCount === 1) {
+        res.json({ "status": "OK" })
+    }
+    else {
+        res.json({ "status": "failed" })
+    }
+})
